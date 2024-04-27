@@ -138,7 +138,7 @@ def plot_scatter_cluster(result, features_to_visualize):
     plt.legend()
     plt.show()
 
-def plot_clusters(df):
+def plot_clusters(df, cluster_centers):
     """
     Plot the clusters in a scatter plot.
 
@@ -155,7 +155,7 @@ def plot_clusters(df):
     plt.figure(figsize=(10, 6))
     for i in range(len(cluster_centers)):
         cluster_data = df[df['Cluster'] == i]
-        plt.scatter(cluster_data[features[0]], cluster_data[features[1]], label=f'Cluster {i+1}')
+        plt.scatter(cluster_data[features[0]], cluster_data[features[1]], label=f'Cluster {i}')
 
    
     plt.xlabel('Total Session Duration (ms)')
@@ -163,4 +163,84 @@ def plot_clusters(df):
     plt.title('Cluster Analysis')
     plt.legend()
     plt.grid(True)
+    plt.show()
+
+
+def cluster_plot_2d(cluster_data, x_feature, y_feature):
+    """
+    Create a scatter plot with hue based on cluster data
+    """
+    # Check if the features are found on the cluster column
+    if x_feature not in cluster_data.columns:
+        print(f'{x_feature} is not a feature on the cluster data columns')
+        return
+    if y_feature not in cluster_data.columns:
+        print(f'{y_feature} is not a feature on the cluster data columns')
+        return
+
+    sns.scatterplot(
+        x=x_feature,
+        y=y_feature,
+        hue="Cluster",
+        style="Cluster", 
+        data=cluster_data
+    )
+
+    # Add title and labels
+    plt.title('Distribution of User Experience Metrics by Cluster (2D)')
+    plt.xlabel('Average TCP Retransmission Total')
+    plt.ylabel('Average RTT Total')
+    plt.show()
+
+def plot_cluster_dispersion_subplots(cluster_data, metric_cols, nrows=3, ncols=4, figsize=(18, 9)):
+    """
+    This function plots user experience metric dispersions (assuming means) 
+    across clusters in subplots.
+
+    Args:
+        cluster_data (pandas.DataFrame): The DataFrame containing cluster dispersion data.
+        metric_cols(list): The user experience metric column names 
+        nrows (int, optional): Number of rows in the subplot grid (defaults to 3).
+        ncols (int, optional): Number of columns in the subplot grid (defaults to 4).
+        figsize (tuple, optional): Size of the figure containing the subplots (defaults to (18, 9)).
+    """
+
+    # Ensure enough subplots for all metrics (optional)
+    num_subplots = nrows * ncols
+    if len(metric_cols) > num_subplots:
+        print(f"Warning: More metrics ({len(metric_cols)}) than available subplots ({num_subplots}). Some metrics might not be plotted.")
+
+    # Create a figure and subplots grid
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
+
+    # Counter to track subplot position
+    plot_count = 0
+
+    # Loop through each user experience metric
+    for metric in metric_cols:
+        # Extract metric name and assumed dispersion property (assuming column format)
+        metric_name, dispersion_property = metric 
+
+        # Select data for the current metric (assuming means)
+        metric_data = cluster_data[metric]
+
+        # Check if we've reached the subplot limit or the end of metrics
+        if plot_count >= num_subplots or len(metric_cols) == plot_count:
+            break
+
+        # Calculate row and column index within the subplot grid
+        row_index = plot_count // ncols
+        col_index = plot_count % ncols
+
+        # Create bar plot on the current subplot
+        metric_data.plot(kind='bar', ax=axes[row_index, col_index], x=metric_data.index, title=f'{dispersion_property.upper()}')
+        axes[row_index, col_index].set_xlabel('Cluster')
+        axes[row_index, col_index].set_ylabel(metric_name)  # Assuming y-axis label same as metric name
+
+        # Increase counter for subplot position
+        plot_count += 1
+
+    # Adjust spacing within subplots (optional)
+    plt.tight_layout()
+    # Show all subplots at once
     plt.show()

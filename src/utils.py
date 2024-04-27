@@ -6,6 +6,8 @@ import seaborn as sns
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.cluster import KMeans
+from sklearn.metrics import euclidean_distances
+
 
 
 def get_numeric_columns(dataframe):
@@ -226,3 +228,87 @@ def adjust_outliers(df, cluster_centers):
             df.loc[total_traffic_outliers.index, 'Total Traffic'] = cluster_center_traffic
 
     return df
+
+def analyze_cluster_dispersion(data, feature, cluster_label='Cluster'):
+    """
+    This function calculates and displays various dispersion metrics for each cluster on the provided user experience metrics.
+
+    Args:
+        data (pandas.DataFrame): The DataFrame containing user experience data and cluster labels.
+        cluster_label (str, optional): The column name containing the cluster labels. Defaults to 'Cluster'.
+    """
+
+    # Group data by cluster
+    cluster_groups = data.groupby(cluster_label)
+
+    # Calculate dispersion metrics using describe()
+    cluster_dispersion = cluster_groups[feature].describe()
+    # return Cluster Dispersion Metrics:
+    return cluster_dispersion
+
+def get_cluster_dispersion_columns(cluster_dispersion, metrics = ['mean', 'std', 'max', 'min']):
+    """
+    Get user experience metric column names (excluding other dispersion properties i.e. count, 25%, 75%)
+
+    Parameters:
+        cluster_dispersion:
+        metrics:
+
+    Returns:
+        metric_cols: 
+    """
+    metric_cols = []
+    cols = list(cluster_dispersion.columns)
+    for i, j in cols:
+        if j in metrics:
+            metric_cols.append((i, j))
+    return metric_cols
+
+def find_min_value_cluster(cluster_centers):
+    """
+    Finds the cluster index with the minimum sum of values across all metrics.
+
+    Args:
+        cluster_centers (np.ndarray): An array of cluster centers (each row represents a cluster).
+
+    Returns:
+        int: The index of the cluster with the minimum sum of values.
+    """
+    # Calculate the mean and standard deviation for each metric
+    mean_values = np.mean(cluster_centers, axis=0)
+    std_values = np.std(cluster_centers, axis=0)
+
+    # Normalize the cluster centers using z-score
+    normalized_centers = (cluster_centers - mean_values) / std_values
+
+    # Calculate the sum of normalized values for each cluster center
+    sum_normalized_values = np.sum(normalized_centers, axis=1)
+
+    # Identify the cluster with the minimum sum of normalized values
+    min_sum_normalized_cluster = np.argmin(sum_normalized_values) 
+
+    return min_sum_normalized_cluster
+
+def calculate_euclidean_distance_score(df, min_cluster):
+    """
+    Calculates the Euclidean distance score for each row in the DataFrame
+    by comparing the three features with the min_cluster.
+
+    Args:
+        df (pd.DataFrame): DataFrame with three features (Dur. (ms), Session Frequency, Total Traffic).
+        min_cluster (pd.Series): Series representing the features of the min_cluster.
+
+    Returns:
+        pd.Series: A Series containing the Euclidean distance scores for each row.
+    """
+    try:
+        # Ensure that the DataFrame and min_cluster have the same columns
+        assert set(df.columns) == set(min_cluster.index), "Columns in DataFrame and min_cluster must match."
+    except AssertionError as e:
+        print(f'AssertionError: {e}')
+        return
+    
+    # Calculate Euclidean distances
+    score = euclidean_distances(df, [min_cluster])
+
+    return score
